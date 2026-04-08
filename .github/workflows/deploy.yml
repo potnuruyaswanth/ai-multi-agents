@@ -13,6 +13,8 @@ env:
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
+    outputs:
+      backend-url: ${{ steps.backend-url.outputs.url }}
     
     permissions:
       contents: read
@@ -96,13 +98,11 @@ SMTP_PASSWORD=SMTP_PASSWORD:latest"
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'frontend/package-lock.json'
 
     - name: Build Frontend
       working-directory: ./frontend
       run: |
-        npm ci
+        npm install
         VITE_API_BASE=${{ needs.deploy-backend.outputs.backend-url }} npm run build
 
     - name: Setup Google Cloud CLI
@@ -116,7 +116,8 @@ SMTP_PASSWORD=SMTP_PASSWORD:latest"
 
     - name: Build Frontend Docker Image
       run: |
-        docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}-frontend:latest \
+        docker build --build-arg VITE_API_BASE=${{ needs.deploy-backend.outputs.backend-url }} \
+                     -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}-frontend:latest \
                      ./frontend
 
     - name: Push to Container Registry

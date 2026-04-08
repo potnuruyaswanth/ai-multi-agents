@@ -274,7 +274,7 @@ deploy_frontend() {
     echo "Building frontend image..."
     FRONTEND_IMAGE_NAME="gcr.io/$GOOGLE_PROJECT_ID/$SERVICE_NAME-frontend:latest"
     
-    docker build -t $FRONTEND_IMAGE_NAME ./frontend
+    docker build --build-arg VITE_API_BASE=$BACKEND_URL -t $FRONTEND_IMAGE_NAME ./frontend
     docker push $FRONTEND_IMAGE_NAME
     
     print_success "Frontend image pushed"
