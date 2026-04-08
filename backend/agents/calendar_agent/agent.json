@@ -1,0 +1,18 @@
+{
+  "name": "calendar_agent",
+  "description": "Creates and manages event timelines and reminders.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/calendar_agent",
+  "skills": [
+    {
+      "id": "add_event",
+      "name": "Add Event",
+      "description": "Creates calendar events from extracted email context."
+    },
+    {
+      "id": "get_events",
+      "name": "Get Events",
+      "description": "Returns upcoming events for APIs and chat queries."
+    }
+  ]
+}

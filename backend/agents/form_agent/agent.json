@@ -1,0 +1,13 @@
+{
+  "name": "form_agent",
+  "description": "Autofills application forms and requests user confirmation before submit.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/form_agent",
+  "skills": [
+    {
+      "id": "preview_form_fill",
+      "name": "Preview Form Fill",
+      "description": "Returns suggested form values for user review."
+    }
+  ]
+}

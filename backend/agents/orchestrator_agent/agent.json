@@ -1,0 +1,18 @@
+{
+  "name": "orchestrator_agent",
+  "description": "A central orchestrator agent coordinates specialized sub-agents for email parsing, task creation, scheduling, notifications, chatbot, and forms.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/orchestrator_agent",
+  "skills": [
+    {
+      "id": "process_email",
+      "name": "Process Email Workflow",
+      "description": "Routes email-derived actions to task, calendar, notification, and form agents."
+    },
+    {
+      "id": "chat",
+      "name": "Chat Query",
+      "description": "Routes user chat queries to the right sub-agent capability."
+    }
+  ]
+}

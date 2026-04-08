@@ -1,0 +1,13 @@
+{
+  "name": "chatbot_agent",
+  "description": "Conversational interface for tasks, events, and deadlines.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/chatbot_agent",
+  "skills": [
+    {
+      "id": "ask_assistant",
+      "name": "Ask Assistant",
+      "description": "Responds to natural-language schedule/task queries."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "notification_agent",
+  "description": "Sends user alerts and reminder notifications.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/notification_agent",
+  "skills": [
+    {
+      "id": "send_notification",
+      "name": "Send Notification",
+      "description": "Sends an email-style alert after automation runs."
+    }
+  ]
+}

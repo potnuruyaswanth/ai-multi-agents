@@ -1,0 +1,140 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: ai-productivity-assistant
+  REGION: asia-south1
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        version: '472.0.0'
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+    - name: Set up Cloud Run authentication
+      run: |
+        gcloud config set run/region ${{ env.REGION }}
+        gcloud config set project ${{ env.GCP_PROJECT_ID }}
+
+    - name: Build Backend Docker Image
+      run: |
+        docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+                     -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+                     ./backend
+
+    - name: Push to Container Registry
+      run: |
+        gcloud auth configure-docker
+        docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+        docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+    - name: Deploy Backend to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image=gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+          --platform managed \
+          --region=${{ env.REGION }} \
+          --memory=512Mi \
+          --timeout=300 \
+          --allow-unauthenticated \
+          --set-env-vars="\
+APP_NAME=AI Productivity Assistant,\
+API_PREFIX=/api/v1,\
+STORAGE_BACKEND=${{ secrets.STORAGE_BACKEND }},\
+FIRESTORE_PROJECT_ID=${{ secrets.FIRESTORE_PROJECT_ID }},\
+GOOGLE_PROJECT_ID=${{ env.GCP_PROJECT_ID }},\
+GOOGLE_LOCATION=${{ env.REGION }},\
+GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }},\
+NOTIFICATION_SENDER_EMAIL=${{ secrets.NOTIFICATION_SENDER_EMAIL }},\
+SMTP_HOST=${{ secrets.SMTP_HOST }},\
+SMTP_PORT=${{ secrets.SMTP_PORT }},\
+SMTP_USER=${{ secrets.SMTP_USER }}" \
+          --set-secrets="\
+GOOGLE_OAUTH_CLIENT_SECRET=GOOGLE_OAUTH_CLIENT_SECRET:latest,\
+SMTP_PASSWORD=SMTP_PASSWORD:latest"
+
+    - name: Get Backend Service URL
+      id: backend-url
+      run: |
+        BACKEND_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --format='value(status.url)')
+        echo "url=$BACKEND_URL" >> $GITHUB_OUTPUT
+        echo "Backend URL: $BACKEND_URL"
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: |
+        npm ci
+        VITE_API_BASE=${{ needs.deploy-backend.outputs.backend-url }} npm run build
+
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+    - name: Build Frontend Docker Image
+      run: |
+        docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}-frontend:latest \
+                     ./frontend
+
+    - name: Push to Container Registry
+      run: |
+        gcloud auth configure-docker
+        docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}-frontend:latest
+
+    - name: Deploy Frontend to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE_NAME }}-frontend \
+          --image=gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}-frontend:latest \
+          --platform managed \
+          --region=${{ env.REGION }} \
+          --memory=256Mi \
+          --allow-unauthenticated \
+          --set-env-vars="VITE_API_BASE=${{ needs.deploy-backend.outputs.backend-url }}"
+
+    - name: Get Frontend Service URL
+      run: |
+        FRONTEND_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }}-frontend --region=${{ env.REGION }} --format='value(status.url)')
+        echo "Frontend URL: $FRONTEND_URL"

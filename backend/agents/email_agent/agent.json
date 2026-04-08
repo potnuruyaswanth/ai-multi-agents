@@ -1,0 +1,13 @@
+{
+  "name": "email_agent",
+  "description": "Reads and classifies Gmail emails for jobs, events, and meetings.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/email_agent",
+  "skills": [
+    {
+      "id": "read_and_classify_email",
+      "name": "Read and Classify Email",
+      "description": "Classifies an email and extracts date/link hints."
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: ai-assistant-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: ai_productivity_assistant
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai-assistant-backend
+    ports:
+      - "8000:8080"
+    environment:
+      APP_NAME: AI Productivity Assistant
+      API_PREFIX: /api/v1
+      STORAGE_BACKEND: mongodb
+      MONGO_URI: mongodb://admin:admin123@mongodb:27017
+      MONGO_DB_NAME: ai_productivity_assistant
+      GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID:-ai-multi-agent-system}
+      GOOGLE_LOCATION: ${GOOGLE_LOCATION:-asia-south1}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
+      GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:8000/api/v1/auth/google/callback}
+      NOTIFICATION_SENDER_EMAIL: ${NOTIFICATION_SENDER_EMAIL}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
+    networks:
+      - ai-network
+    healthcheck:
+      test: curl -f http://localhost:8080/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ai-assistant-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    networks:
+      - ai-network
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+
+networks:
+  ai-network:
+    driver: bridge

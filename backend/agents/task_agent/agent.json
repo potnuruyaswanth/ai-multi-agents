@@ -1,0 +1,18 @@
+{
+  "name": "task_agent",
+  "description": "Manages tasks and checklist creation with deadlines and priorities.",
+  "version": "1.0.0",
+  "url": "http://localhost:8080/a2a/task_agent",
+  "skills": [
+    {
+      "id": "create_task",
+      "name": "Create Task",
+      "description": "Creates a task entry in the database."
+    },
+    {
+      "id": "get_tasks",
+      "name": "Get Tasks",
+      "description": "Returns tasks for dashboard or chatbot queries."
+    }
+  ]
+}
