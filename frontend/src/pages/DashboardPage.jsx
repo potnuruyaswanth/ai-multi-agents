@@ -57,11 +57,23 @@ function DashboardPage() {
   };
 
   const connectProvider = async (provider) => {
-    const response = await fetch(`${API_BASE}/auth/google/${provider}/url?user_id=default-user`);
-    const data = await response.json();
-    if (data.authorization_url) {
-      window.open(data.authorization_url, "_blank", "noopener,noreferrer");
-      setStatus(`Opened ${provider} OAuth flow`);
+    setSyncing(true);
+    setStatus(`Starting ${provider} OAuth flow...`);
+    try {
+      const response = await fetch(`${API_BASE}/auth/google/${provider}/url?user_id=default-user`);
+      if (!response.ok) {
+        throw new Error(`Failed to request OAuth URL (${response.status})`);
+      }
+      const data = await response.json();
+      if (!data.authorization_url) {
+        throw new Error("Authorization URL missing from response");
+      }
+
+      // Use same-tab navigation to avoid popup blockers in browsers.
+      window.location.assign(data.authorization_url);
+    } catch (error) {
+      setStatus(`Failed to connect ${provider}: ${error.message}`);
+      setSyncing(false);
     }
   };
 
