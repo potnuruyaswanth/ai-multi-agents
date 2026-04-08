@@ -55,6 +55,7 @@ pnpm-lock.yaml
 .env.local
 .env.*.local
 .env.production.local
+frontend/.env.production
 
 # Logs
 *.log
